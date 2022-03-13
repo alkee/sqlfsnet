@@ -1,4 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using sqlfsnet;
 
 namespace sqlfsnet_test
 {
@@ -8,6 +9,7 @@ namespace sqlfsnet_test
         [TestMethod]
         public void Test1()
         {
+            var fs = new FileSystem(Env.DB_PATH);
         }
     }
 }
