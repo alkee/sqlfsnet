@@ -14,12 +14,14 @@ namespace sqlfsnet
     public class Item
     {
         public const char SEPARATOR = '/';
+        public const long ROOT_ITEM_ID = 0L;
+        public const string ROOT_ITEM_NAME = "";
 
         [PrimaryKey, AutoIncrement]
         public long Id { get; set; }
 
         [Indexed]
-        public long ParentItemId { get; set; }
+        public long ParentItemId { get; set; } = ROOT_ITEM_ID;
 
         public enum Type
         {
