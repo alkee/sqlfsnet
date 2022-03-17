@@ -38,6 +38,33 @@
             return items.Last();
         }
 
+        public async Task<Item> Touch(string absoluteFilePath)
+        {
+            var dirPath = Path.GetDirectoryName(absoluteFilePath) ?? Item.SEPARATOR.ToString()/*root*/;
+            var filePath = Path.GetFileName(absoluteFilePath);
+            var file = await db.SelectItem(absoluteFilePath);
+            if (file is not null)
+            {
+                if (file.ItemType != Item.Type.FILE)
+                    throw new IOException($"not a file : {absoluteFilePath}");
+                file.LastModifiedUtc = DateTime.UtcNow;
+                await db.Conn.UpdateAsync(file);
+                return file;
+            }
+
+            var dir = await db.SelectItem(dirPath);
+            if (dir is null)
+                throw new IOException($"path not found : {dirPath}");
+            file = new Item
+            {
+                ItemType = Item.Type.FILE,
+                Name = filePath,
+                ParentItemId = dir.Id,
+            };
+            await db.Conn.InsertAsync(file);
+            return file;
+        }
+
         private readonly Db db;
     }
 }

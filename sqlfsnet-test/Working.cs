@@ -20,5 +20,22 @@ namespace sqlfsnet_test
             var items = await fs.ListAsync("/a/b");
             Assert.AreEqual(2/*c, cc*/, items.Count);
         }
+
+        [TestMethod]
+        public async Task Test_Touch()
+        {
+            var fs = new FileSystem(Env.DB_PATH);
+            const string ENV_DIR = "/a/b/c/d/e";
+
+            await fs.CreateDirAsync(ENV_DIR, true);
+            await Assert.ThrowsExceptionAsync<IOException>(() => fs.Touch("/a/bb/c"));
+            var cc = await fs.Touch("/a/b/cc");
+            Assert.AreEqual(0, cc.Size);
+            await Task.Delay(1000);
+            var touched_cc = await fs.Touch("/a/b/cc");
+            Assert.AreEqual(0, touched_cc.Size);
+            Assert.AreEqual(cc.CreatedUtc, touched_cc.CreatedUtc);
+            Assert.IsTrue(cc.LastModifiedUtc < touched_cc.LastModifiedUtc);
+        }
     }
 }

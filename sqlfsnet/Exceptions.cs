@@ -17,6 +17,5 @@
             if (itemName.Contains(Item.SEPARATOR)) throw new ArgumentException($"contains not allowed character", nameof(itemName));
             return itemName;
         }
-
     }
 }

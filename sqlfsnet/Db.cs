@@ -43,19 +43,19 @@ namespace sqlfsnet
             }
         }
 
-        //public async Task<Item?> SelectItem(string absolutePath)
-        //{
-        //    absolutePath = absolutePath
-        //        .ValidateAbsolutePath()
-        //        .TrimEnd(Item.SEPARATOR);
-        //    if (absolutePath.Length < 1) return Root;
+        public async Task<Item?> SelectItem(string absolutePath)
+        {
+            absolutePath = absolutePath
+                .ValidateAbsolutePath()
+                .TrimEnd(Item.SEPARATOR);
+            if (absolutePath.Length < 1) return Root;
 
-        //    var itemNames = absolutePath.Split(Item.SEPARATOR);
-        //    var items = await GetItemTree(absolutePath);
-        //    if (items.Count < itemNames.Length) // not found
-        //        return null;
-        //    return items.Last();
-        //}
+            var itemNames = absolutePath.Split(Item.SEPARATOR);
+            var items = await GetItemTree(absolutePath);
+            if (items.Count < itemNames.Length) // not found
+                return null;
+            return items.Last();
+        }
 
         private async Task<Item?> SelectItem(string itemName, Item parent)
         {
