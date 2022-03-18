@@ -9,8 +9,9 @@
 
         public async Task<List<Item>> ListAsync(string dirAbsolutePath)
         {
-            var dir = (await db.GetItemTree(dirAbsolutePath))
-                .LastOrDefault();
+            var tree = await db.GetItemTree(dirAbsolutePath);
+
+            var dir = tree.LastOrDefault();
             if (dir is null
                 || dir.ItemType != Item.Type.DIRECTORY)
                 throw new DirectoryNotFoundException($"path not found : {dirAbsolutePath}");
@@ -24,21 +25,35 @@
             var itemNames = dirAbsolutePath
                 .TrimEnd(Item.SEPARATOR)
                 .Split(Item.SEPARATOR);
-            if (items.Count == itemNames.Length)
+            if (items.Last() is not null)
                 throw new IOException($"directory already exists : {dirAbsolutePath}");
+            items.RemoveAt(items.Count - 1);
+
             if (recursive == false && items.Count == itemNames.Length - 1)
-            {
-                return await db.CreateDirectory(itemNames.Last(), items.Last());
+            { // 마지막 dir 만 없는 경우
+                return await db.CreateDirectory(itemNames.Last(), items.Last()!);
             }
+
             for (var i = items.Count; i < itemNames.Length; ++i)
             {
                 var itemName = itemNames[i];
-                items.Add(await db.CreateDirectory(itemName, items.Last()));
+                items.Add(await db.CreateDirectory(itemName, items.Last()!));
             }
-            return items.Last();
+            return items.Last()!;
         }
 
-        public async Task<Item> Touch(string absoluteFilePath)
+        public async Task DeleteDirAsync(string dirAbsolutePath, bool force)
+        {
+            var dir = await db.SelectItem(dirAbsolutePath);
+            if (dir is null)
+                throw new DirectoryNotFoundException($"not foudn : {dirAbsolutePath}");
+            var count = await db.CountItems(dir);
+            if (count > 0 && force == false)
+                throw new IOException($"not empty : {dirAbsolutePath}");
+            await db.DeleteItem(dir);
+        }
+
+        public async Task<Item> TouchAsync(string absoluteFilePath)
         {
             var dirPath = Path.GetDirectoryName(absoluteFilePath) ?? Item.SEPARATOR.ToString()/*root*/;
             var filePath = Path.GetFileName(absoluteFilePath);

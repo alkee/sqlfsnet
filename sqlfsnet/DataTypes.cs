@@ -16,6 +16,8 @@ namespace sqlfsnet
         public const char SEPARATOR = '/';
         public const long ROOT_ITEM_ID = 0L;
         public const string ROOT_ITEM_NAME = "";
+        public const long TRASHCAN_ITEM_ID = ROOT_ITEM_ID + 1;
+        public const string TRASHCAN_ITEM_NAME = "trashes";
 
         [PrimaryKey, AutoIncrement]
         public long Id { get; set; }

@@ -6,12 +6,19 @@ namespace sqlfsnet
 {
     internal class Db
     {
-        public readonly SQLiteAsyncConnection Conn;
-        public readonly Item Root;
+        public SQLiteAsyncConnection Conn { get; init; }
+        public Item Root { get; init; }
+        public Item TrashCan { get; init; }
 
         public Db(string dbFilePath)
         {
-            Conn = new SQLiteAsyncConnection(dbFilePath, storeDateTimeAsTicks: true);
+            // 테스트를 위한 in-memory-db 사용에 문제가 있어 URI 지원하도록
+            var sqliteOpenFlags =
+                (SQLiteOpenFlags)0x00000040 |  // SQLITE_OPEN_URI
+                SQLiteOpenFlags.Create |
+                SQLiteOpenFlags.ReadWrite |
+                SQLiteOpenFlags.SharedCache;
+            Conn = new SQLiteAsyncConnection(dbFilePath, sqliteOpenFlags, true);
 
             var syncConn = Conn.GetConnection(); // 생성자에서 비동기를 사용할 수 없으므로
 
@@ -41,6 +48,18 @@ namespace sqlfsnet
                 };
                 syncConn.InsertOrReplace(Root);
             }
+            TrashCan = syncConn.Find<Item>(Item.TRASHCAN_ITEM_ID);
+            if (TrashCan is null)
+            {
+                TrashCan = new Item
+                {
+                    Id = Item.TRASHCAN_ITEM_ID,
+                    ItemType = Item.Type.DIRECTORY,
+                    Name = Item.TRASHCAN_ITEM_NAME,
+                    ParentItemId = long.MaxValue,
+                };
+                syncConn.InsertOrReplace(TrashCan);
+            }
         }
 
         public async Task<Item?> SelectItem(string absolutePath)
@@ -50,10 +69,7 @@ namespace sqlfsnet
                 .TrimEnd(Item.SEPARATOR);
             if (absolutePath.Length < 1) return Root;
 
-            var itemNames = absolutePath.Split(Item.SEPARATOR);
             var items = await GetItemTree(absolutePath);
-            if (items.Count < itemNames.Length) // not found
-                return null;
             return items.Last();
         }
 
@@ -76,19 +92,36 @@ namespace sqlfsnet
                 .ToListAsync();
         }
 
-        public async Task<List<Item>> GetItemTree(string absolutePath)
+        public async Task<int> CountItems(Item directory)
+        {
+            if (directory.ItemType != Item.Type.DIRECTORY)
+                throw new ArgumentException($"not a directory", nameof(directory));
+            return await Conn
+                .Table<Item>()
+                .Where(x => x.ParentItemId == directory.Id)
+                .CountAsync();
+        }
+
+        public async Task DeleteItem(Item item)
+        {
+            item.ParentItemId = Item.TRASHCAN_ITEM_ID;
+            await Conn.UpdateAsync(item);
+        }
+
+        // 못발견한 마지막 요소 null
+        public async Task<List<Item?>> GetItemTree(string absolutePath)
         {
             var itemNames = absolutePath
                 .ValidateAbsolutePath()
                 .Trim(Item.SEPARATOR)
                 .Split(Item.SEPARATOR);
 
-            var ret = new List<Item>() { Root };
+            var ret = new List<Item?>() { Root };
             foreach (var itemName in itemNames)
             {
-                var item = await SelectItem(itemName, ret.Last());
-                if (item is null) return ret;
+                var item = await SelectItem(itemName, ret.Last()!);
                 ret.Add(item);
+                if (item is null) return ret;
             }
             return ret;
         }
