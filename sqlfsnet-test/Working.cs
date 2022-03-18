@@ -1,5 +1,4 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using sqlfsnet;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -12,6 +11,7 @@ namespace sqlfsnet_test
         public async Task Test_CreateDir()
         {
             var fs = new FileSystem(Env.DB_PATH);
+            var fs = Env.CreateFileSystem();
             var e = await fs.CreateDirAsync("/a/b/c/d/e", true);
             Assert.AreEqual("e", e.Name);
             await Assert.ThrowsExceptionAsync<IOException>(() => fs.CreateDirAsync("/a/b/c/d/e", true)); // already exists
@@ -25,6 +25,7 @@ namespace sqlfsnet_test
         public async Task Test_Touch()
         {
             var fs = new FileSystem(Env.DB_PATH);
+            var fs = Env.CreateFileSystem();
             const string ENV_DIR = "/a/b/c/d/e";
 
             await fs.CreateDirAsync(ENV_DIR, true);
