@@ -18,7 +18,7 @@
             return await db.SelectItems(dir);
         }
 
-        public async Task<Item> CreateDirAsync(string dirAbsolutePath, bool recursive = false)
+        public async Task<Item> MakeDirAsync(string dirAbsolutePath, bool recursive = false)
         {
             var items = await db.GetItemTree(dirAbsolutePath);
 
@@ -42,15 +42,18 @@
             return items.Last()!;
         }
 
-        public async Task DeleteDirAsync(string dirAbsolutePath, bool force)
+        public async Task RemoveAsync(string absolutePath, bool force)
         {
-            var dir = await db.SelectItem(dirAbsolutePath);
-            if (dir is null)
-                throw new DirectoryNotFoundException($"not foudn : {dirAbsolutePath}");
-            var count = await db.CountItems(dir);
-            if (count > 0 && force == false)
-                throw new IOException($"not empty : {dirAbsolutePath}");
-            await db.DeleteItem(dir);
+            var item = await db.SelectItem(absolutePath);
+            if (item is null)
+                throw new IOException($"not found : {absolutePath}");
+            if (item.ItemType == Item.Type.DIRECTORY)
+            { // directory 인 경우 force 가 아니면 비어있는 경우에만.
+                var count = await db.CountItems(item);
+                if (count > 0 && force == false)
+                    throw new IOException($"not empty directory : {absolutePath}");
+            }
+            await db.DeleteItem(item);
         }
 
         public async Task<Item> TouchAsync(string absoluteFilePath)
